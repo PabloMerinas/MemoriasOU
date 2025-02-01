@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reemplazo en DOCX</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h2>Rellenar Documento DOCX</h2>
+    <form id="formulario">
+        <label for="direccion">Dirección:</label>
+        <input type="text" id="direccion" name="direccion" required>
+        <br><br>
+        <label for="archivo">Seleccionar archivo .docx:</label>
+        <input type="file" id="archivo" accept=".docx" multiple>
+        <br><br>
+        <button type="button" id="procesar">Procesar Documento</button>
+    </form>
+
+    <!-- Cargar dependencias -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.5/dist/pizzip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.31.2/docxtemplater.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    
+
+    <!-- Cargar script.js correctamente -->
+    <script defer src="script.js"></script>
+
+</body>
+</html>
