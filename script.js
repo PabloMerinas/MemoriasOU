@@ -1,33 +1,96 @@
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("procesar").addEventListener("click", async () => {
-        const direccion = document.getElementById("direccion").value;
-        const archivos = document.getElementById("archivo").files;
+    const fileInput = document.getElementById("archivo");
+    const formContainer = document.getElementById("campos-dinamicos");
+    const procesarBtn = document.getElementById("procesar");
+    let etiquetasDetectadas = new Set(); // Para almacenar las etiquetas encontradas
+    let archivosSeleccionados = []; // Para almacenar los archivos subidos
 
-        if (!direccion || archivos.length === 0) {
-            alert("Por favor, ingresa una dirección y selecciona al menos un archivo.");
+    // 📌 Detectar etiquetas en los archivos seleccionados
+    fileInput.addEventListener("change", async (event) => {
+        etiquetasDetectadas.clear(); // Reiniciar etiquetas
+        archivosSeleccionados = Array.from(event.target.files); // Guardar archivos
+
+        if (archivosSeleccionados.length === 0) return;
+
+        console.log(`📂 ${archivosSeleccionados.length} archivos seleccionados`);
+
+        for (let archivo of archivosSeleccionados) {
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(archivo);
+
+            reader.onload = async (e) => {
+                try {
+                    const buffer = e.target.result;
+                    const zipFile = new window.PizZip(buffer);
+                    const doc = new window.docxtemplater(zipFile);
+                    
+                    // Obtener el contenido del documento
+                    const text = doc.getFullText();
+
+                    // Buscar etiquetas con el formato [[etiqueta]]
+                    const etiquetasEncontradas = text.match(/\[\[(.*?)\]\]/g);
+                    
+                    if (etiquetasEncontradas) {
+                        etiquetasEncontradas.forEach(etiqueta => etiquetasDetectadas.add(etiqueta.replace(/\[\[|\]\]/g, "")));
+                    }
+                    
+                    generarFormularioDinamico();
+                } catch (error) {
+                    console.error(`❌ Error al leer etiquetas en ${archivo.name}:`, error);
+                }
+            };
+        }
+    });
+
+    // 📌 Generar formulario dinámico con las etiquetas detectadas
+    function generarFormularioDinamico() {
+        formContainer.innerHTML = ""; // Limpiar formulario anterior
+
+        if (etiquetasDetectadas.size > 0) {
+            etiquetasDetectadas.forEach(etiqueta => {
+                const div = document.createElement("div");
+                div.innerHTML = `
+                    <label for="${etiqueta}">${etiqueta}:</label>
+                    <input type="text" id="${etiqueta}" name="${etiqueta}" required>
+                    <br><br>
+                `;
+                formContainer.appendChild(div);
+            });
+
+            procesarBtn.style.display = "block"; // Mostrar botón de procesar
+        } else {
+            formContainer.innerHTML = "<p>No se detectaron etiquetas en los archivos seleccionados.</p>";
+            procesarBtn.style.display = "none"; // Ocultar botón si no hay etiquetas
+        }
+    }
+
+    // 📌 Procesar archivos con los valores ingresados
+    procesarBtn.addEventListener("click", async () => {
+        if (archivosSeleccionados.length === 0) {
+            alert("No hay archivos seleccionados.");
             return;
         }
 
-        console.log(`📂 ${archivos.length} archivos seleccionados`);
-        const zip = new JSZip();
+        const valores = {};
+        etiquetasDetectadas.forEach(etiqueta => {
+            valores[etiqueta] = document.getElementById(etiqueta).value;
+        });
 
+        console.log("📝 Valores ingresados:", valores);
+
+        const zip = new JSZip();
         let archivosProcesados = 0;
 
-        // Procesar cada archivo
-        for (let archivo of archivos) {
+        for (let archivo of archivosSeleccionados) {
             console.log(`📄 Procesando: ${archivo.name}`);
 
             const reader = new FileReader();
             reader.readAsArrayBuffer(archivo);
 
-            reader.onload = async (event) => {
+            reader.onload = async (e) => {
                 try {
-                    const buffer = event.target.result;
-                    console.log("📄 Cargando documento .docx...");
-
+                    const buffer = e.target.result;
                     const zipFile = new window.PizZip(buffer);
-
-                    // Configurar docxtemplater
                     const doc = new window.docxtemplater(zipFile, {
                         delimiters: { start: "[[" , end: "]]" },
                         paragraphLoop: true,
@@ -36,8 +99,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         linebreaks: true
                     });
 
-                    // Reemplazar [[direccion]] en el documento
-                    doc.render({ direccion });
+                    // Reemplazar etiquetas con los valores ingresados
+                    doc.render(valores);
 
                     // Generar el nuevo archivo .docx
                     const blob = new Blob([doc.getZip().generate({ type: "arraybuffer" })], {
@@ -51,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     archivosProcesados++;
 
                     // Si todos los archivos han sido procesados, generar y descargar el ZIP
-                    if (archivosProcesados === archivos.length) {
+                    if (archivosProcesados === archivosSeleccionados.length) {
                         zip.generateAsync({ type: "blob" }).then((zipBlob) => {
                             window.saveAs(zipBlob, "memorias_actualizadas.zip");
                             console.log("📦 ZIP descargado: memorias_actualizadas.zip");
@@ -61,11 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.error(`❌ Error al procesar ${archivo.name}:`, error);
                     alert(`Hubo un error con el archivo: ${archivo.name}`);
                 }
-            };
-
-            reader.onerror = (error) => {
-                console.error(`❌ Error al leer ${archivo.name}:`, error);
-                alert(`Error al leer el archivo: ${archivo.name}`);
             };
         }
     });

@@ -9,14 +9,16 @@
 <body>
     <h2>Rellenar Documento DOCX</h2>
     <form id="formulario">
-        <label for="direccion">Dirección:</label>
-        <input type="text" id="direccion" name="direccion" required>
-        <br><br>
-        <label for="archivo">Seleccionar archivo .docx:</label>
+        <label for="archivo">Seleccionar archivos .docx:</label>
         <input type="file" id="archivo" accept=".docx" multiple>
         <br><br>
-        <button type="button" id="procesar">Procesar Documento</button>
+    
+        <div id="campos-dinamicos">
+        </div>
+    
+        <button type="button" id="procesar" style="display: none;">Procesar Documentos</button>
     </form>
+    
 
     <!-- Cargar dependencias -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
