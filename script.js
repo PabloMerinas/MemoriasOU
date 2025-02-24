@@ -9,31 +9,47 @@ document.addEventListener("DOMContentLoaded", () => {
     fileInput.addEventListener("change", async (event) => {
         etiquetasDetectadas.clear(); // Reiniciar etiquetas
         archivosSeleccionados = Array.from(event.target.files); // Guardar archivos
-
+    
         if (archivosSeleccionados.length === 0) return;
-
+    
         console.log(`📂 ${archivosSeleccionados.length} archivos seleccionados`);
-
+    
         for (let archivo of archivosSeleccionados) {
             const reader = new FileReader();
             reader.readAsArrayBuffer(archivo);
-
+    
             reader.onload = async (e) => {
                 try {
                     const buffer = e.target.result;
                     const zipFile = new window.PizZip(buffer);
                     const doc = new window.docxtemplater(zipFile);
-                    
-                    // Obtener el contenido del documento
-                    const text = doc.getFullText();
-
+    
+                    // Obtener el contenido del cuerpo del documento
+                    let text = doc.getFullText(); 
+    
+                    // 📌 Extraer nombres de archivos de encabezado y pie de página
+                    const headerNames = Object.keys(zipFile.files).filter(name => name.match(/word\/header\d+\.xml/));
+                    const footerNames = Object.keys(zipFile.files).filter(name => name.match(/word\/footer\d+\.xml/));
+    
+                    // 📌 Leer y procesar cada archivo de encabezado
+                    for (let headerName of headerNames) {
+                        const headerXml = zipFile.file(headerName).asText();
+                        text += `\n${headerXml.replace(/<[^>]+>/g, "")}`; // Eliminar etiquetas XML
+                    }
+    
+                    // 📌 Leer y procesar cada archivo de pie de página
+                    for (let footerName of footerNames) {
+                        const footerXml = zipFile.file(footerName).asText();
+                        text += `\n${footerXml.replace(/<[^>]+>/g, "")}`; // Eliminar etiquetas XML
+                    }
+    
                     // Buscar etiquetas con el formato [[etiqueta]]
                     const etiquetasEncontradas = text.match(/\[\[(.*?)\]\]/g);
-                    
+    
                     if (etiquetasEncontradas) {
                         etiquetasEncontradas.forEach(etiqueta => etiquetasDetectadas.add(etiqueta.replace(/\[\[|\]\]/g, "")));
                     }
-                    
+    
                     generarFormularioDinamico();
                 } catch (error) {
                     console.error(`❌ Error al leer etiquetas en ${archivo.name}:`, error);
@@ -41,6 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         }
     });
+    
+    
+    
 
     // 📌 Generar formulario dinámico con las etiquetas detectadas
     function generarFormularioDinamico() {
